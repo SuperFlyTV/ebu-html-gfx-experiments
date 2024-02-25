@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>HTML GFX Renderer</title>
+		<style>
+			iframe {
+				width: 100%;
+				height: 100%;
+				border: none;
+			}
+		</style>
+	</head>
+	<body>
+		Render
+		<pre
+			id="console"
+			style="position: absolute; top: 0; right: 0; background-color: #fff; max-width: 50%; opacity: 0.5; overflow: auto"
+		></pre>
+		<div id="layers"></div>
+		<script>
+			let triggerReconnectTimeout = null
+			function triggerReconnect(delay) {
+				if (triggerReconnectTimeout) return
+				triggerReconnectTimeout = setTimeout(() => {
+					triggerReconnectTimeout = null
+					connectToServer()
+				}, delay)
+			}
+			function connectToServer() {
+				// Open websocket connection to server:
+				log('Connecting to server...')
+
+				const url =
+					window.location.origin.replace('http://', 'ws://').replace('https://', 'wss://') + '/renderer-data-connection'
+				const webSocket = new WebSocket(url)
+				webSocket.onopen = (event) => {
+					log('Connected to server')
+
+					// Register renderer:
+					log(`Registering render as "${rendererId}"`)
+					webSocket.send(
+						JSON.stringify({
+							type: 'register',
+							rendererId: rendererId,
+						})
+					)
+				}
+				webSocket.onclose = (event) => {
+					log('Disconnected')
+					triggerReconnect(1000)
+				}
+				webSocket.onerror = (event) => log('WebSocket error', event)
+
+				webSocket.onmessage = (event) => handleMessage(event.data)
+			}
+
+			function log(...msg) {
+				console.log(...msg)
+				msg.forEach((m) => (document.getElementById('console').innerText += m + '\n'))
+			}
+			function handleMessage(msgStr) {
+				log(msgStr)
+				const msg = JSON.parse(msgStr)
+				if (msg.command === 'post-load') {
+					let elLayer = document.getElementById(`layer-${msg.payload.layer}`)
+					if (!elLayer) {
+						elLayer = document.createElement('div')
+						elLayer.id = `layer-${msg.payload.layer}`
+						document.getElementById('layers').appendChild(elLayer)
+					}
+					// replace layer content
+
+					elLayer.innerHTML = ''
+					const iframe = document.createElement('iframe')
+					iframe.onload = () => {
+						sendToIframe(msg.payload.layer, 'load', msg.payload)
+					}
+					iframe.src = `/template/${msg.payload.template}`
+
+					elLayer.appendChild(iframe)
+				} else if (msg.command === 'post-load') {
+					sendToIframe(msg.payload.layer, 'load', msg.payload)
+				} else if (msg.command === 'post-cue') {
+					sendToIframe(msg.payload.layer, 'cue', msg.payload)
+				} else if (msg.command === 'post-play') {
+					sendToIframe(msg.payload.layer, 'play', msg.payload)
+				} else if (msg.command === 'post-stop') {
+					sendToIframe(msg.payload.layer, 'stop', msg.payload)
+				}
+			}
+			function sendToIframe(layer, command, payload) {
+				console.log('sendToIframe', layer, command, payload)
+				const elLayer = document.getElementById(`layer-${layer}`)
+				if (!elLayer) return log(`Layer "${layer}" not found`)
+				const iframe = elLayer.getElementsByTagName('iframe')[0]
+
+				iframe.contentWindow.postMessage(
+					{
+						command,
+						payload,
+					},
+					'*'
+				)
+			}
+
+			// ======================================================
+			const rendererId = window.location.pathname.match(/render\/(\d)+/)[1]
+			log(`Renderer "${rendererId}" starting up...`)
+
+			connectToServer()
+		</script>
+	</body>
+</html>

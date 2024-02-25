@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>HTML GFX Test</title>
+		<style>
+			body {
+				font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana,
+					sans-serif;
+			}
+			#line1 {
+				position: absolute;
+			}
+
+			#content.animate #line1 {
+				transition: all 0.5s;
+			}
+			#content.cue #line1 {
+				opacity: 0.5;
+				transform: scale(0.5);
+
+				left: -5em;
+				top: 2em;
+			}
+			#content.play #line1 {
+				opacity: 1;
+				transform: scale(1);
+				top: 2em;
+				left: 1em;
+			}
+			#content.stop #line1 {
+				opacity: 0.3;
+				transform: scale(0.5);
+				top: 5em;
+				left: 1em;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="content" class="cue">
+			<div id="line1"></div>
+		</div>
+		<script>
+			window.addEventListener('message', (event) => {
+				const cmd = event.data
+				if (cmd && cmd.command) {
+					console.log('Message received from the parent: ', cmd) // Message received from parent
+
+					if (cmd.command === 'load') {
+						document.getElementById('line1').innerText = cmd.payload.data.line1
+					} else if (cmd.command === 'cue') {
+						document.getElementById('content').className = 'cue'
+					} else if (cmd.command === 'play') {
+						document.getElementById('content').className = 'play animate'
+					} else if (cmd.command === 'stop') {
+						document.getElementById('content').className = 'stop animate'
+					}
+				}
+			})
+		</script>
+	</body>
+</html>

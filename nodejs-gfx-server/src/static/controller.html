@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>HTML GFX Renderer</title>
+	</head>
+	<body>
+		Controller
+		<pre
+			id="console"
+			style="position: absolute; top: 0; right: 0; background-color: #fff; max-width: 50%; opacity: 0.5; overflow: auto"
+		></pre>
+		<div>
+			<button onclick="sendLoad().catch(console.error)">Send Load</button><br />
+			<button onclick="sendCue().catch(console.error)">Send Cue</button><br />
+			<button onclick="sendPlay().catch(console.error)">Send Play</button><br />
+			<button onclick="sendStop().catch(console.error)">Send Stop</button><br />
+		</div>
+		<script>
+			function log(...msg) {
+				console.log(...msg)
+				msg.forEach((m) => (document.getElementById('console').innerText += m + '\n'))
+			}
+
+			const baseUrl = window.location.origin + '/api/'
+			async function send(o) {
+				const method = o.method || 'POST'
+				const url = baseUrl + `${o.rendererId || '0'}/${o.name}`
+				log(`${method} ${url} ${JSON.stringify(o.payload)}`)
+				const res = await fetch(url, {
+					method: method,
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(o.payload),
+				})
+				log('response: ' + res.status + ' ' + (await res.text()))
+			}
+			async function sendLoad() {
+				send({
+					name: 'load',
+					payload: {
+						layer: '0',
+						template: 'test.html',
+						data: {
+							line1: 'Hello world!',
+						},
+					},
+				})
+			}
+			async function sendCue() {
+				send({
+					name: 'cue',
+					payload: { layer: '0' },
+				})
+			}
+			async function sendPlay() {
+				send({
+					name: 'play',
+					payload: { layer: '0' },
+				})
+			}
+			async function sendStop() {
+				send({
+					name: 'stop',
+					payload: { layer: '0' },
+				})
+			}
+		</script>
+	</body>
+</html>
